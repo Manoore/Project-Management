@@ -9,6 +9,9 @@ export async function ensureDatabase() {
   await sql`CREATE TABLE IF NOT EXISTS tasks (id SERIAL PRIMARY KEY, title TEXT NOT NULL, project_name TEXT NOT NULL DEFAULT 'General', completed BOOLEAN NOT NULL DEFAULT FALSE, priority TEXT NOT NULL DEFAULT 'Normal', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`CREATE TABLE IF NOT EXISTS checkins (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, mood TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`CREATE TABLE IF NOT EXISTS time_entries (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, clocked_in_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), clocked_out_at TIMESTAMPTZ);`;
+  await sql`CREATE TABLE IF NOT EXISTS leave_requests (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, leave_type TEXT NOT NULL, start_date DATE NOT NULL, end_date DATE NOT NULL, reason TEXT, status TEXT NOT NULL DEFAULT 'Pending', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+  await sql`CREATE TABLE IF NOT EXISTS meetings (id SERIAL PRIMARY KEY, title TEXT NOT NULL, starts_at TIMESTAMPTZ NOT NULL, duration_minutes INTEGER NOT NULL DEFAULT 30, attendees TEXT[] NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+  await sql`CREATE TABLE IF NOT EXISTS activity_events (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, event_type TEXT NOT NULL, message TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   const employees = await sql`SELECT id FROM employees LIMIT 1`;
   if (employees.length === 0) await sql`INSERT INTO employees (name, initials, role) VALUES ('Maya', 'MS', 'Product designer')`;
   const projects = await sql`SELECT id FROM projects LIMIT 1`;
