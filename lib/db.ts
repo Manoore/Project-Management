@@ -5,7 +5,9 @@ export const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : n
 export async function ensureDatabase() {
   if (!sql) return false;
   await sql`CREATE TABLE IF NOT EXISTS employees (id SERIAL PRIMARY KEY, name TEXT NOT NULL, initials TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'Employee', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
-  await sql`CREATE TABLE IF NOT EXISTS projects (id SERIAL PRIMARY KEY, name TEXT NOT NULL, progress INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'On track', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+  await sql`CREATE TABLE IF NOT EXISTS projects (id SERIAL PRIMARY KEY, name TEXT NOT NULL, progress INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'On track', owner TEXT NOT NULL DEFAULT 'Maya', description TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS owner TEXT NOT NULL DEFAULT 'Maya';`;
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS description TEXT;`;
   await sql`CREATE TABLE IF NOT EXISTS tasks (id SERIAL PRIMARY KEY, title TEXT NOT NULL, project_name TEXT NOT NULL DEFAULT 'General', completed BOOLEAN NOT NULL DEFAULT FALSE, priority TEXT NOT NULL DEFAULT 'Normal', status TEXT NOT NULL DEFAULT 'To do', owner TEXT NOT NULL DEFAULT 'Maya', due_date DATE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'To do';`;
   await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS owner TEXT NOT NULL DEFAULT 'Maya';`;
