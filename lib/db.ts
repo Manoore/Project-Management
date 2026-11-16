@@ -17,6 +17,10 @@ export async function ensureDatabase() {
   await sql`CREATE TABLE IF NOT EXISTS time_entries (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, clocked_in_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), clocked_out_at TIMESTAMPTZ);`;
   await sql`CREATE TABLE IF NOT EXISTS activity_events (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, event_type TEXT NOT NULL, message TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`CREATE TABLE IF NOT EXISTS notifications (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, type TEXT NOT NULL, message TEXT NOT NULL, read BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+  await sql`CREATE TABLE IF NOT EXISTS project_members (id SERIAL PRIMARY KEY, project_name TEXT NOT NULL, employee_name TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'Contributor', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(project_name, employee_name));`;
+  await sql`CREATE TABLE IF NOT EXISTS subtasks (id SERIAL PRIMARY KEY, task_id INTEGER NOT NULL, title TEXT NOT NULL, completed BOOLEAN NOT NULL DEFAULT FALSE, owner TEXT NOT NULL DEFAULT 'Maya', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+  await sql`CREATE TABLE IF NOT EXISTS task_comments (id SERIAL PRIMARY KEY, task_id INTEGER NOT NULL, employee_name TEXT NOT NULL, body TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+  await sql`CREATE TABLE IF NOT EXISTS task_dependencies (id SERIAL PRIMARY KEY, task_id INTEGER NOT NULL, depends_on_task_id INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(task_id, depends_on_task_id));`;
   const employees = await sql`SELECT id FROM employees LIMIT 1`;
   if (employees.length === 0) await sql`INSERT INTO employees (name, initials, role) VALUES ('Maya', 'MS', 'Product designer')`;
   const projects = await sql`SELECT id FROM projects LIMIT 1`;
