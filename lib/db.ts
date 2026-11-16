@@ -15,8 +15,6 @@ export async function ensureDatabase() {
   await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();`;
   await sql`CREATE TABLE IF NOT EXISTS checkins (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, mood TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`CREATE TABLE IF NOT EXISTS time_entries (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, clocked_in_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), clocked_out_at TIMESTAMPTZ);`;
-  await sql`CREATE TABLE IF NOT EXISTS leave_requests (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, leave_type TEXT NOT NULL, start_date DATE NOT NULL, end_date DATE NOT NULL, reason TEXT, status TEXT NOT NULL DEFAULT 'Pending', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
-  await sql`CREATE TABLE IF NOT EXISTS meetings (id SERIAL PRIMARY KEY, title TEXT NOT NULL, starts_at TIMESTAMPTZ NOT NULL, duration_minutes INTEGER NOT NULL DEFAULT 30, attendees TEXT[] NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`CREATE TABLE IF NOT EXISTS activity_events (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, event_type TEXT NOT NULL, message TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`CREATE TABLE IF NOT EXISTS notifications (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, type TEXT NOT NULL, message TEXT NOT NULL, read BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   const employees = await sql`SELECT id FROM employees LIMIT 1`;
@@ -27,3 +25,5 @@ export async function ensureDatabase() {
   if (tasks.length === 0) await sql`INSERT INTO tasks (title, project_name, priority, status, owner, due_date) VALUES ('Review final screens with design', 'Atlas Mobile', 'High', 'In progress', 'Maya', CURRENT_DATE), ('QA handover', 'Atlas Mobile', 'High', 'Review', 'Riya', CURRENT_DATE + 2), ('Research synthesis', 'Customer Insight Hub', 'Normal', 'To do', 'Arjun', CURRENT_DATE + 4), ('Brand review', 'Q4 Brand Refresh', 'Normal', 'Done', 'Maya', CURRENT_DATE - 1)`;
   return true;
 }
+
+
