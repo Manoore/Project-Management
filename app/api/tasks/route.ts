@@ -20,8 +20,10 @@ export async function PATCH(request: Request) {
   const body = await request.json();
   if (!body.id) return NextResponse.json({ error: "Task id is required" }, { status: 400 });
   if (!await ensureDatabase()) return NextResponse.json({ ok: true, persisted: false });
-  const rows = await sql!`UPDATE tasks SET status = COALESCE(${body.status ?? null}, status), owner = COALESCE(${body.owner ?? null}, owner), completed = COALESCE(${body.completed ?? null}, completed), updated_at = NOW() WHERE id = ${Number(body.id)} RETURNING id, title, project_name AS "projectName", status, owner, priority, due_date AS "dueDate", completed`;
+  const rows = await sql!`UPDATE tasks SET status = COALESCE(${body.status ?? null}, status), owner = COALESCE(${body.owner ?? null}, owner), priority = COALESCE(${body.priority ?? null}, priority), due_date = COALESCE(${body.dueDate ?? null}, due_date), completed = COALESCE(${body.completed ?? null}, completed), updated_at = NOW() WHERE id = ${Number(body.id)} RETURNING id, title, project_name AS "projectName", status, owner, priority, due_date AS "dueDate", completed`;
   const task = rows[0] as { title: string; status: string; owner: string } | undefined;
   if (task) await sql!`INSERT INTO activity_events (employee_name, event_type, message) VALUES ('Maya', 'task_updated', ${`Updated ${task.title}: ${task.status} · owner ${task.owner}`})`;
   return NextResponse.json(task ?? { error: "Task not found" }, { status: task ? 200 : 404 });
 }
+
+
