@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Project = { name: string; progress: number; status: string };
+type Project = { name: string; progress: number; status: string; owner?: string; description?: string };
 type Dashboard = { employee: string; focus: string; completed: number; total: number; projects: Project[]; schedule: { time: string; title: string; detail: string }[] };
 const navigation = ["⌂  Today", "✓  My work", "▦  Projects", "◷  Time & attendance", "☼  People & wellbeing", "▤  Reports"];
 
