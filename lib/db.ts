@@ -54,6 +54,10 @@ export async function ensureDatabase() {
   await sql`CREATE TABLE IF NOT EXISTS task_attachments (id SERIAL PRIMARY KEY, task_id INTEGER NOT NULL, file_name TEXT NOT NULL, file_url TEXT NOT NULL, uploaded_by TEXT NOT NULL DEFAULT 'Maya', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`CREATE TABLE IF NOT EXISTS intake_forms (id SERIAL PRIMARY KEY, name TEXT NOT NULL, description TEXT, team TEXT NOT NULL DEFAULT 'Product', fields JSONB NOT NULL DEFAULT '[]'::jsonb, enabled BOOLEAN NOT NULL DEFAULT TRUE, created_by TEXT NOT NULL DEFAULT 'Maya', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`CREATE TABLE IF NOT EXISTS intake_submissions (id SERIAL PRIMARY KEY, form_id INTEGER NOT NULL, submitted_by TEXT NOT NULL DEFAULT 'Maya', payload JSONB NOT NULL DEFAULT '{}'::jsonb, task_id INTEGER, status TEXT NOT NULL DEFAULT 'New', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+  const mayaAccount = await sql`SELECT id FROM employees WHERE name = 'Maya' LIMIT 1`;
+  if (mayaAccount.length === 0) await sql`INSERT INTO employees (name, initials, role, team, access_role) VALUES ('Maya', 'MS', 'Product designer', 'Product', 'admin')`;
+  await sql`UPDATE employees SET access_role = 'admin' WHERE name = 'Maya'`;
+  try {
   const employees = await sql`SELECT id FROM employees LIMIT 1`;
   if (employees.length === 0) await sql`INSERT INTO employees (name, initials, role) VALUES ('Maya', 'MS', 'Product designer')`;
   await sql`INSERT INTO employees (name, initials, role, team, access_role) VALUES ('Riya', 'RK', 'Product manager', 'Product', 'member'), ('Arjun', 'AS', 'Engineer', 'Engineering', 'member') ON CONFLICT DO NOTHING`;
@@ -81,6 +85,9 @@ export async function ensureDatabase() {
   if (timeRows.length === 0) await sql`INSERT INTO time_entries (employee_name, clocked_in_at, clocked_out_at) VALUES ('Maya', CURRENT_DATE + TIME '09:02', CURRENT_DATE + TIME '17:18'), ('Riya', CURRENT_DATE + TIME '09:18', CURRENT_DATE + TIME '17:02')`;
   const intakeRows = await sql`SELECT id FROM intake_forms LIMIT 1`;
   if (intakeRows.length === 0) await sql`INSERT INTO intake_forms (name, description, team, fields) VALUES ('Product improvement', 'Request a customer-facing product improvement.', 'Product', '[{"key":"summary","label":"What should change?"}]'::jsonb), ('Design review', 'Ask the design team for a review or critique.', 'Design', '[{"key":"summary","label":"What needs review?"}]'::jsonb)`;
+  } catch {
+    // Demo seed data is best-effort. A seed mismatch must not take down the API.
+  }
   return true;
 }
 
