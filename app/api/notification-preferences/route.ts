@@ -1,0 +1,8 @@
+import { NextResponse } from "next/server";
+import { ensureDatabase, sql } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+
+export async function GET(request: Request) { if (!await ensureDatabase()) return NextResponse.json({ inApp: true, email: false, dailyDigest: true, dueReminders: true, quietHours: {} }); const user = await getCurrentUser(request); const rows = await sql!`SELECT in_app AS "inApp", email, daily_digest AS "dailyDigest", due_reminders AS "dueReminders", quiet_hours AS "quietHours" FROM notification_preferences WHERE employee_name = ${user.name}`; return NextResponse.json(rows[0] ?? { inApp: true, email: false, dailyDigest: true, dueReminders: true, quietHours: {} }); }
+
+export async function PATCH(request: Request) { const user = await getCurrentUser(request); const body = await request.json(); if (!await ensureDatabase()) return NextResponse.json({ ...body, persisted: false }); const rows = await sql!`INSERT INTO notification_preferences (employee_name, in_app, email, daily_digest, due_reminders, quiet_hours) VALUES (${user.name}, ${body.inApp ?? true}, ${body.email ?? false}, ${body.dailyDigest ?? true}, ${body.dueReminders ?? true}, ${JSON.stringify(body.quietHours ?? {})}::jsonb) ON CONFLICT (employee_name) DO UPDATE SET in_app = EXCLUDED.in_app, email = EXCLUDED.email, daily_digest = EXCLUDED.daily_digest, due_reminders = EXCLUDED.due_reminders, quiet_hours = EXCLUDED.quiet_hours RETURNING in_app AS "inApp", email, daily_digest AS "dailyDigest", due_reminders AS "dueReminders", quiet_hours AS "quietHours"`; return NextResponse.json(rows[0]); }
+

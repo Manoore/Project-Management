@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { ensureDatabase, sql } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 
 const fallback = { employee: "Maya", focus: "Finalize mobile onboarding handoff", completed: 4, total: 6, projects: [{ name: "Atlas Mobile", progress: 82, status: "On track" }, { name: "Customer Insight Hub", progress: 57, status: "Needs review" }, { name: "Q4 Brand Refresh", progress: 64, status: "On track" }], schedule: [{ time: "10:00", title: "Focus block", detail: "Mobile onboarding handoff" }, { time: "12:30", title: "Design stand-up", detail: "Product team · 25 min" }, { time: "15:00", title: "1:1 with Riya", detail: "Growth & support" }] };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     if (!await ensureDatabase()) return NextResponse.json(fallback);
+    const employeeName = (await getCurrentUser(request)).name;
     const [employeeRows, projectRows, taskRows] = await Promise.all([
       sql!`SELECT name, initials FROM employees ORDER BY id LIMIT 1`,
-      sql!`SELECT id, name, progress, status, owner FROM projects WHERE archived = FALSE ORDER BY id`,
+      sql!`SELECT id, name, progress, status, owner, team FROM projects WHERE archived = FALSE AND (owner = ${employeeName} OR name IN (SELECT project_name FROM project_members WHERE employee_name = ${employeeName})) ORDER BY id`,
       sql!`SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE completed)::int AS completed FROM tasks`,
     ]);
     const employee = employeeRows[0] as { name: string; initials: string };
