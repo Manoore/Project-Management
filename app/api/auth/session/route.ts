@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { clearSessionCookie, getCurrentUser } from "@/lib/auth";
 import { ensureDatabase, sql } from "@/lib/db";
 import { hashPassword, checkPassword } from "@/lib/passwords";
+import { DEMO_ADMIN_EMAIL } from "@/lib/demo-admin";
 
 export async function GET(request: Request) {
   try { return NextResponse.json({ authenticated: true, user: await getCurrentUser(request) }); }
@@ -13,6 +14,7 @@ export async function POST(request: Request) {
   if (request.headers.get("origin") !== new URL(request.url).origin) return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
   const body = await request.json().catch(() => ({}));
   const email = String(body.email ?? "").trim().toLowerCase(), password = String(body.password ?? "");
+  if (email === DEMO_ADMIN_EMAIL && process.env.ENABLE_DEMO_ADMIN === 'false') return NextResponse.json({ error: "Demo access is disabled" }, { status: 403 });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || !password || password.length > 128) return NextResponse.json({ error: "Enter a valid email and password" }, { status: 400 });
   try {
     if (!await ensureDatabase()) return NextResponse.json({ error: "Sign-in database is not configured" }, { status: 503 });

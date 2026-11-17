@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { ensureDatabase, sql } from "@/lib/db";
+import { DEMO_ADMIN_NAME } from "./demo-admin";
 
 export type CurrentUser = { name: string; initials: string; role: string; team: string; accessRole: "admin" | "manager" | "member" | "viewer" };
 
@@ -12,6 +13,7 @@ export async function getCurrentUser(request: Request): Promise<CurrentUser> {
   if (sessionId) {
     const sessions = await sql!`SELECT employee_name FROM auth_sessions WHERE id = ${sessionId}::uuid AND provider IN ('password', 'microsoft') AND expires_at > NOW() LIMIT 1`;
     if (sessions[0]) {
+      if (sessions[0].employee_name === DEMO_ADMIN_NAME && process.env.ENABLE_DEMO_ADMIN === 'false') throw new Error("Demo account disabled");
       const employee = await sql!`SELECT name, initials, role, team, access_role AS "accessRole" FROM employees WHERE name = ${sessions[0].employee_name} LIMIT 1`;
       if (employee[0]) return employee[0] as CurrentUser;
     }

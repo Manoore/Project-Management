@@ -17,7 +17,7 @@ function load(path, overrides = {}) {
   assert.equal(await p.checkPassword('wrong-password', a), false);
   assert.equal(await p.checkPassword('anything', 'invalid'), false);
   const db = { sql: async () => [] };
-  const auth = load('lib/auth.ts', { '@/lib/db': db });
+  const auth = load('lib/auth.ts', { '@/lib/db': db, './demo-admin': load('lib/demo-admin.ts') });
   await assert.rejects(auth.getCurrentUser(new Request('https://example.com')));
   await assert.rejects(auth.getCurrentUser(new Request('https://example.com', { headers: { 'x-employee': 'Maya', 'x-session-id': 'development' } })));
   await assert.rejects(auth.getCurrentUser(new Request('https://example.com', { headers: { cookie: 'peopleflow_session=invalid' } })));
