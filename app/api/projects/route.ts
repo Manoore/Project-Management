@@ -10,6 +10,8 @@ export async function POST(request: Request) {
   const body = await request.json();
   if (!body.name) return NextResponse.json({ error: "Project name is required" }, { status: 400 });
   if (!await ensureDatabase()) return NextResponse.json({ id: 0, ...body }, { status: 201 });
+  const existing = await sql!`SELECT id FROM projects WHERE LOWER(name) = LOWER(${body.name}) AND archived = FALSE LIMIT 1`;
+  if (existing[0]) return NextResponse.json({ error: "A project with this name already exists" }, { status: 409 });
   const rows = await sql!`INSERT INTO projects (name, owner, description, status) VALUES (${body.name}, ${body.owner ?? "Maya"}, ${body.description ?? null}, 'On track') RETURNING id, name, progress, status, owner, description`;
   const project = rows[0] as { name: string; owner: string };
   await sql!`INSERT INTO notifications (employee_name, type, message) VALUES (${project.owner}, 'project_assigned', ${`You were assigned as owner of ${project.name}`})`;
