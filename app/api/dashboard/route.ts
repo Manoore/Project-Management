@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     if (!await ensureDatabase()) return NextResponse.json({ error: "Dashboard database unavailable" }, { status: 503 });
     let timeZone = new URL(request.url).searchParams.get('timeZone') || 'UTC';
     try { new Intl.DateTimeFormat('en', { timeZone }); } catch { timeZone = 'UTC'; }
-    const [projects, summary, focus, time, mood, upcoming, activity] = await Promise.all([
+    const [projects, summary, focus, time, mood, upcoming, activity, profile] = await Promise.all([
       sql!`SELECT p.id, p.name, p.status, p.owner, p.team, CASE WHEN COUNT(t.id) = 0 THEN 0 ELSE ROUND(100.0 * COUNT(t.id) FILTER (WHERE t.completed) / COUNT(t.id)) END::int AS progress FROM projects p LEFT JOIN tasks t ON t.project_name = p.name WHERE p.archived = FALSE AND (p.owner = ${user.name} OR p.name IN (SELECT project_name FROM project_members WHERE employee_name = ${user.name})) GROUP BY p.id ORDER BY p.id`,
       sql!`SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE completed)::int AS completed, COUNT(*) FILTER (WHERE NOT completed AND due_date < CURRENT_DATE)::int AS overdue, COALESCE(SUM(estimate_minutes) FILTER (WHERE NOT completed), 0)::int AS "plannedMinutes" FROM tasks WHERE owner = ${user.name} AND (project_name = 'General' OR project_name IN (SELECT name FROM projects WHERE NOT archived AND (owner = ${user.name} OR name IN (SELECT project_name FROM project_members WHERE employee_name = ${user.name}))))`,
       sql!`SELECT t.id, t.title, t.project_name AS "projectName", t.priority, t.owner, t.status, t.due_date AS "dueDate", (SELECT COUNT(*)::int FROM subtasks WHERE task_id = t.id) AS "subtaskCount" FROM tasks t WHERE t.owner = ${user.name} AND NOT t.completed AND (t.project_name = 'General' OR t.project_name IN (SELECT name FROM projects WHERE NOT archived AND (owner = ${user.name} OR name IN (SELECT project_name FROM project_members WHERE employee_name = ${user.name})))) ORDER BY CASE t.priority WHEN 'Urgent' THEN 0 WHEN 'High' THEN 1 WHEN 'Normal' THEN 2 ELSE 3 END, t.due_date NULLS LAST, t.id LIMIT 1`,
@@ -16,8 +16,9 @@ export async function GET(request: Request) {
       sql!`SELECT mood FROM checkins WHERE employee_name = ${user.name} ORDER BY created_at DESC LIMIT 1`,
       sql!`SELECT title, project_name AS detail, TO_CHAR(due_date, 'Mon DD') AS time FROM tasks WHERE owner = ${user.name} AND NOT completed AND due_date IS NOT NULL AND (project_name = 'General' OR project_name IN (SELECT name FROM projects WHERE NOT archived AND (owner = ${user.name} OR name IN (SELECT project_name FROM project_members WHERE employee_name = ${user.name})))) ORDER BY due_date, id LIMIT 5`,
       sql!`SELECT id, message, created_at AS "createdAt" FROM activity_events WHERE employee_name = ${user.name} ORDER BY created_at DESC LIMIT 5`,
+      sql!`SELECT display_name FROM employees WHERE name = ${user.name} LIMIT 1`,
     ]);
-    return NextResponse.json({ employee: user.name, initials: user.initials, accessRole: user.accessRole, ...summary[0], projects, focusTask: focus[0] ?? null, focus: focus[0]?.title ?? "Your next step starts here", workingSeconds: time[0]?.seconds ?? 0, timeZone, clockedIn: Boolean(time[0]?.active), mood: mood[0]?.mood ?? "", schedule: upcoming, activity }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ employee: profile[0]?.display_name || user.name, initials: user.initials, accessRole: user.accessRole, ...summary[0], projects, focusTask: focus[0] ?? null, focus: focus[0]?.title ?? "Your next step starts here", workingSeconds: time[0]?.seconds ?? 0, timeZone, clockedIn: Boolean(time[0]?.active), mood: mood[0]?.mood ?? "", schedule: upcoming, activity }, { headers: { "Cache-Control": "no-store" } });
   } catch { return NextResponse.json({ error: "Dashboard could not load. Please retry." }, { status: 503 }); }
 }
 
@@ -43,4 +44,3 @@ export async function POST(request: Request) {
   } else return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
-

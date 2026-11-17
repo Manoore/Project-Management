@@ -15,13 +15,14 @@ async function initializeDatabase() {
   // Warm instances reuse the promise. Cold instances check one version row instead
   // of running all schema statements and seed queries on every API request.
   try {
-    const ready = await sql`SELECT version FROM peopleflow_schema WHERE version = '2026-11-demo-admin-v1'`;
+    const ready = await sql`SELECT version FROM peopleflow_schema WHERE version = '2026-11-planning-v1'`;
     if (ready.length) return true;
   } catch (error) {
     if ((error as { code?: string }).code !== '42P01') throw error;
   }
   await sql`CREATE TABLE IF NOT EXISTS employees (id SERIAL PRIMARY KEY, name TEXT NOT NULL, initials TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'Employee', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`ALTER TABLE employees ADD COLUMN IF NOT EXISTS email TEXT;`;
+  await sql`ALTER TABLE employees ADD COLUMN IF NOT EXISTS display_name TEXT;`;
   await sql`ALTER TABLE employees ADD COLUMN IF NOT EXISTS team TEXT NOT NULL DEFAULT 'Product';`;
   await sql`CREATE TABLE IF NOT EXISTS teams (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE, description TEXT, lead TEXT, archived BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE, description TEXT, owner TEXT NOT NULL DEFAULT 'Maya', team TEXT NOT NULL DEFAULT 'Product', archived BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
@@ -39,6 +40,8 @@ async function initializeDatabase() {
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS target_date DATE;`;
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS health TEXT NOT NULL DEFAULT 'On track';`;
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS budget NUMERIC(12,2);`;
+  await sql`CREATE TABLE IF NOT EXISTS project_cycles (id SERIAL PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id), name TEXT NOT NULL, start_date DATE NOT NULL, end_date DATE NOT NULL, archived BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), CHECK (end_date >= start_date));`;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS project_cycles_active_name_unique ON project_cycles (project_id, LOWER(name)) WHERE archived = FALSE;`;
   await sql`CREATE TABLE IF NOT EXISTS tasks (id SERIAL PRIMARY KEY, title TEXT NOT NULL, project_name TEXT NOT NULL DEFAULT 'General', completed BOOLEAN NOT NULL DEFAULT FALSE, priority TEXT NOT NULL DEFAULT 'Normal', status TEXT NOT NULL DEFAULT 'To do', owner TEXT NOT NULL DEFAULT 'Maya', due_date DATE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'To do';`;
   await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS owner TEXT NOT NULL DEFAULT 'Maya';`;
@@ -48,6 +51,10 @@ async function initializeDatabase() {
   await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS start_date DATE;`;
   await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimate_minutes INTEGER;`;
   await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurring_rule TEXT;`;
+  await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';`;
+  await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS labels TEXT[] NOT NULL DEFAULT ARRAY[]::text[];`;
+  await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS cycle_id INTEGER REFERENCES project_cycles(id) ON DELETE SET NULL;`;
+  await sql`CREATE INDEX IF NOT EXISTS tasks_cycle_id_idx ON tasks (cycle_id);`;
   await sql`CREATE TABLE IF NOT EXISTS checkins (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, mood TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`CREATE TABLE IF NOT EXISTS time_entries (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, clocked_in_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), clocked_out_at TIMESTAMPTZ);`;
   await sql`CREATE TABLE IF NOT EXISTS activity_events (id SERIAL PRIMARY KEY, employee_name TEXT NOT NULL, event_type TEXT NOT NULL, message TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
@@ -121,8 +128,7 @@ async function initializeDatabase() {
     // Do not replace an existing account, promote another user, or reset a password.
     await sql`WITH first_run AS (INSERT INTO demo_seed_versions (version) VALUES ('demo-admin-v1') ON CONFLICT DO NOTHING RETURNING version), employee AS (INSERT INTO employees (name, initials, email, role, team, access_role) SELECT ${DEMO_ADMIN_NAME}, 'DA', ${DEMO_ADMIN_EMAIL}, 'Demo administrator', 'Product', 'admin' WHERE EXISTS (SELECT 1 FROM first_run) AND NOT EXISTS (SELECT 1 FROM password_accounts WHERE email = ${DEMO_ADMIN_EMAIL}) AND NOT EXISTS (SELECT 1 FROM employees WHERE name = ${DEMO_ADMIN_NAME}) ON CONFLICT DO NOTHING RETURNING name) INSERT INTO password_accounts (email, employee_name, password_hash) SELECT ${DEMO_ADMIN_EMAIL}, name, ${DEMO_ADMIN_HASH} FROM employee ON CONFLICT DO NOTHING`;
   }
-  await sql`INSERT INTO peopleflow_schema (version) VALUES ('2026-11-demo-admin-v1') ON CONFLICT DO NOTHING`;
+  await sql`INSERT INTO peopleflow_schema (version) VALUES ('2026-11-planning-v1') ON CONFLICT DO NOTHING`;
   return true;
 }
-
 
