@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const employee = (await getCurrentUser(request)).name;
   const team = new URL(request.url).searchParams.get("team");
   const owner = new URL(request.url).searchParams.get("owner");
-  return NextResponse.json(await sql!`SELECT id, name, progress, status, owner, team, description, archived FROM projects WHERE archived = FALSE AND (owner = ${employee} OR name IN (SELECT project_name FROM project_members WHERE employee_name = ${employee})) AND (${team ?? null}::text IS NULL OR team = ${team ?? null}) AND (${owner ?? null}::text IS NULL OR owner = ${owner ?? null}) ORDER BY id`);
+  const response = NextResponse.json(await sql!`SELECT id, name, progress, status, owner, team, description, archived FROM projects WHERE archived = FALSE AND (owner = ${employee} OR name IN (SELECT project_name FROM project_members WHERE employee_name = ${employee})) AND (${team ?? null}::text IS NULL OR team = ${team ?? null}) AND (${owner ?? null}::text IS NULL OR owner = ${owner ?? null}) ORDER BY id`);\n  response.headers.set("Cache-Control", "no-store");\n  return response;
 }
 
 export async function POST(request: Request) {
