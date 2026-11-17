@@ -17,16 +17,14 @@ export async function POST(request: Request) {
   const currentUser = await getCurrentUser(request);
   if (!canManageProjects(currentUser)) return NextResponse.json({ error: "Only managers can create projects" }, { status: 403 });
   const body = await request.json();
-  if (!body.name) return NextResponse.json({ error: "Project name is required" }, { status: 400 });
-  if (!await ensureDatabase()) return NextResponse.json({ id: 0, ...body }, { status: 201 });
+  if (typeof body.name !== 'string' || !body.name.trim() || body.name.trim().length > 120) return NextResponse.json({ error: "Enter a project name of 1–120 characters" }, { status: 400 });
+  body.name = body.name.trim();
+  if (!await ensureDatabase()) return NextResponse.json({ error: "Database unavailable. Project was not created." }, { status: 503 });
   const existing = await sql!`SELECT id FROM projects WHERE LOWER(name) = LOWER(${body.name}) AND archived = FALSE LIMIT 1`;
   if (existing[0]) return NextResponse.json({ error: "A project with this name already exists" }, { status: 409 });
-  const rows = await sql!`INSERT INTO projects (name, owner, team, product, description, status) VALUES (${body.name}, ${body.owner ?? "Maya"}, ${body.team ?? "Product"}, ${body.product ?? "General"}, ${body.description ?? null}, 'On track') RETURNING id, name, progress, status, owner, team, product, description`;
-  const project = rows[0] as { name: string; owner: string };
-  await sql!`INSERT INTO project_members (project_name, employee_name, role) VALUES (${project.name}, ${project.owner}, 'Owner') ON CONFLICT (project_name, employee_name) DO NOTHING`;
-  await sql!`INSERT INTO notifications (employee_name, type, message) VALUES (${project.owner}, 'project_assigned', ${`You were assigned as owner of ${project.name}`})`;
-  await sql!`INSERT INTO activity_events (employee_name, event_type, message) VALUES ('Maya', 'project_created', ${`Created project ${project.name} and assigned ${project.owner}`})`;
-  return NextResponse.json(project, { status: 201 });
+  const owner = body.owner || currentUser.name;
+  const rows = await sql!`WITH created AS (INSERT INTO projects (name, owner, team, product, description, status) VALUES (${body.name}, ${owner}, ${body.team || currentUser.team}, ${body.product || "General"}, ${body.description ?? null}, 'On track') RETURNING id, name, progress, status, owner, team, product, description), membership AS (INSERT INTO project_members (project_name, employee_name, role) SELECT name, owner, 'Owner' FROM created UNION SELECT name, ${currentUser.name}, 'Contributor' FROM created ON CONFLICT (project_name, employee_name) DO NOTHING), notification AS (INSERT INTO notifications (employee_name, type, message) SELECT owner, 'project_assigned', 'You were assigned as owner of ' || name FROM created), activity AS (INSERT INTO activity_events (employee_name, event_type, message) SELECT ${currentUser.name}, 'project_created', 'Created project ' || name FROM created) SELECT * FROM created`;
+  return NextResponse.json(rows[0], { status: 201 });
 }
 
 export async function PATCH(request: Request) {

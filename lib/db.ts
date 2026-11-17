@@ -2,8 +2,23 @@ import { neon } from "@neondatabase/serverless";
 
 export const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
 
-export async function ensureDatabase() {
+let databaseReady: Promise<boolean> | null = null;
+export async function ensureDatabase(): Promise<boolean> {
   if (!sql) return false;
+  if (!databaseReady) databaseReady = initializeDatabase().catch(error => { databaseReady = null; throw error; });
+  return databaseReady;
+}
+
+async function initializeDatabase() {
+  if (!sql) return false;
+  // Warm instances reuse the promise. Cold instances check one version row instead
+  // of running all schema statements and seed queries on every API request.
+  try {
+    const ready = await sql`SELECT version FROM peopleflow_schema WHERE version = '2026-11-project-create-v1'`;
+    if (ready.length) return true;
+  } catch (error) {
+    if ((error as { code?: string }).code !== '42P01') throw error;
+  }
   await sql`CREATE TABLE IF NOT EXISTS employees (id SERIAL PRIMARY KEY, name TEXT NOT NULL, initials TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'Employee', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`ALTER TABLE employees ADD COLUMN IF NOT EXISTS email TEXT;`;
   await sql`ALTER TABLE employees ADD COLUMN IF NOT EXISTS team TEXT NOT NULL DEFAULT 'Product';`;
@@ -99,6 +114,8 @@ export async function ensureDatabase() {
     console.error("Demo seed failed", error);
     // Demo seed data is best-effort. A seed mismatch must not take down the API.
   }
+  await sql`CREATE TABLE IF NOT EXISTS peopleflow_schema (version TEXT PRIMARY KEY)`;
+  await sql`INSERT INTO peopleflow_schema (version) VALUES ('2026-11-project-create-v1') ON CONFLICT DO NOTHING`;
   return true;
 }
 
