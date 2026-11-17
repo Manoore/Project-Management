@@ -11,6 +11,8 @@ export async function ensureDatabase() {
   await sql`CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE, description TEXT, owner TEXT NOT NULL DEFAULT 'Maya', team TEXT NOT NULL DEFAULT 'Product', archived BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`ALTER TABLE employees ADD COLUMN IF NOT EXISTS access_role TEXT NOT NULL DEFAULT 'member';`;
   await sql`CREATE TABLE IF NOT EXISTS auth_sessions (id UUID PRIMARY KEY, employee_name TEXT NOT NULL, provider TEXT NOT NULL DEFAULT 'development', expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+  await sql`CREATE TABLE IF NOT EXISTS password_accounts (email TEXT PRIMARY KEY, employee_name TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+  await sql`CREATE TABLE IF NOT EXISTS login_attempts (email TEXT PRIMARY KEY, attempts INTEGER NOT NULL DEFAULT 0, window_start TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`CREATE TABLE IF NOT EXISTS projects (id SERIAL PRIMARY KEY, name TEXT NOT NULL, progress INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'On track', owner TEXT NOT NULL DEFAULT 'Maya', description TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE;`;
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS owner TEXT NOT NULL DEFAULT 'Maya';`;
