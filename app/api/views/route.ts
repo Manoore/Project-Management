@@ -16,3 +16,11 @@ export async function POST(request: Request) {
   return NextResponse.json(rows[0], { status: 201 });
 }
 
+export async function DELETE(request: Request) {
+  const user = await getCurrentUser(request);
+  const id = Number(new URL(request.url).searchParams.get("id")); if (!id) return NextResponse.json({ error: "View id is required" }, { status: 400 });
+  if (!await ensureDatabase()) return NextResponse.json({ ok: true, persisted: false });
+  await sql!`DELETE FROM saved_views WHERE id = ${id} AND employee_name = ${user.name}`;
+  return NextResponse.json({ ok: true });
+}
+

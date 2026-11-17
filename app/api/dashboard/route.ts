@@ -8,14 +8,16 @@ export async function GET(request: Request) {
   try {
     if (!await ensureDatabase()) return NextResponse.json(fallback);
     const employeeName = (await getCurrentUser(request)).name;
-    const [employeeRows, projectRows, taskRows] = await Promise.all([
+    const [employeeRows, projectRows, taskRows, focusRows] = await Promise.all([
       sql!`SELECT name, initials FROM employees ORDER BY id LIMIT 1`,
       sql!`SELECT id, name, progress, status, owner, team FROM projects WHERE archived = FALSE AND (owner = ${employeeName} OR name IN (SELECT project_name FROM project_members WHERE employee_name = ${employeeName})) ORDER BY id`,
       sql!`SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE completed)::int AS completed FROM tasks`,
+      sql!`SELECT t.id, t.title, t.project_name AS "projectName", t.priority, t.owner, t.status, t.due_date AS "dueDate", COUNT(s.id)::int AS "subtaskCount" FROM tasks t LEFT JOIN subtasks s ON s.task_id = t.id WHERE t.completed = FALSE AND (t.owner = ${employeeName} OR t.project_name IN (SELECT name FROM projects WHERE archived = FALSE AND (owner = ${employeeName} OR name IN (SELECT project_name FROM project_members WHERE employee_name = ${employeeName})))) GROUP BY t.id ORDER BY CASE t.priority WHEN 'Urgent' THEN 1 WHEN 'High' THEN 2 WHEN 'Normal' THEN 3 ELSE 4 END, t.due_date NULLS LAST, t.id LIMIT 1`,
     ]);
     const employee = employeeRows[0] as { name: string; initials: string };
     const taskSummary = taskRows[0] as { total: number; completed: number };
-    return NextResponse.json({ ...fallback, employee: employee?.name ?? fallback.employee, completed: taskSummary?.completed ?? 0, total: taskSummary?.total ?? 0, projects: projectRows });
+    const focusTask = focusRows[0] ?? null;
+    return NextResponse.json({ ...fallback, employee: employee?.name ?? fallback.employee, completed: taskSummary?.completed ?? 0, total: taskSummary?.total ?? 0, projects: projectRows, focus: focusTask?.title ?? "No active focus task", focusTask });
   } catch (error) {
     console.error("Dashboard database read failed", error);
     return NextResponse.json(fallback);

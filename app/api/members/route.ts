@@ -4,7 +4,13 @@ import { canManageProjects, getCurrentUser } from "@/lib/auth";
 
 export async function GET(request: Request) {
   if (!await ensureDatabase()) return NextResponse.json([]);
-  const project = new URL(request.url).searchParams.get("project");
+  const params = new URL(request.url).searchParams;
+  if (params.get("all") === "true") {
+    const currentUser = await getCurrentUser(request);
+    if (currentUser.accessRole !== "admin") return NextResponse.json({ error: "Only admins can view workspace access" }, { status: 403 });
+    return NextResponse.json(await sql!`SELECT name, email, role, team, access_role AS "accessRole" FROM employees ORDER BY name`);
+  }
+  const project = params.get("project");
   return NextResponse.json(await sql!`SELECT id, project_name AS "projectName", employee_name AS "employeeName", role FROM project_members WHERE project_name = ${project ?? ""} ORDER BY employee_name`);
 }
 

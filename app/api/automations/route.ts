@@ -23,3 +23,11 @@ export async function PATCH(request: Request) {
   return NextResponse.json(rows[0] ?? { error: "Automation not found" }, { status: rows[0] ? 200 : 404 });
 }
 
+export async function DELETE(request: Request) {
+  const user = await getCurrentUser(request); if (!canManageProjects(user)) return NextResponse.json({ error: "Only managers can manage automations" }, { status: 403 });
+  const id = Number(new URL(request.url).searchParams.get("id")); if (!id) return NextResponse.json({ error: "Automation id is required" }, { status: 400 });
+  if (!await ensureDatabase()) return NextResponse.json({ ok: true, persisted: false });
+  await sql!`DELETE FROM automation_rules WHERE id = ${id}`;
+  return NextResponse.json({ ok: true });
+}
+
