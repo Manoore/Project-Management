@@ -13,3 +13,5 @@ export async function PATCH(request: Request) {
   else if (body.id) await sql!`UPDATE notifications SET read = TRUE WHERE id = ${Number(body.id)} AND employee_name = 'Maya'`;
   return NextResponse.json({ ok: true });
 }
+
+

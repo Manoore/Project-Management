@@ -8,7 +8,7 @@ export async function GET() {
     if (!await ensureDatabase()) return NextResponse.json(fallback);
     const [employeeRows, projectRows, taskRows] = await Promise.all([
       sql!`SELECT name, initials FROM employees ORDER BY id LIMIT 1`,
-      sql!`SELECT name, progress, status FROM projects ORDER BY id`,
+      sql!`SELECT id, name, progress, status, owner FROM projects WHERE archived = FALSE ORDER BY id`,
       sql!`SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE completed)::int AS completed FROM tasks`,
     ]);
     const employee = employeeRows[0] as { name: string; initials: string };
@@ -36,3 +36,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Database write failed" }, { status: 500 });
   }
 }
+
+
