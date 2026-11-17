@@ -8,7 +8,8 @@ export async function GET(request: Request) {
   if (params.get("all") === "true") {
     const currentUser = await getCurrentUser(request);
     if (currentUser.accessRole !== "admin") return NextResponse.json({ error: "Only admins can view workspace access" }, { status: 403 });
-    return NextResponse.json(await sql!`SELECT name, email, role, team, access_role AS "accessRole" FROM employees ORDER BY name`);
+    const employees = await sql!`SELECT name, email, role, team, access_role AS "accessRole" FROM employees ORDER BY name, id`;
+    return NextResponse.json(Array.from(new Map(employees.map((employee) => [employee.name, employee])).values()));
   }
   const project = params.get("project");
   return NextResponse.json(await sql!`SELECT id, project_name AS "projectName", employee_name AS "employeeName", role FROM project_members WHERE project_name = ${project ?? ""} ORDER BY employee_name`);
