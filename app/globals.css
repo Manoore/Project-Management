@@ -12,4 +12,5 @@
 .form-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}.form-tile{border:1px solid var(--line);border-radius:10px;background:#fff;text-align:left;padding:13px;cursor:pointer}.form-tile:hover,.form-tile.active{border-color:#9ca7ff;background:#f7f8ff}.form-tile b,.form-tile small{display:block}.form-tile small{font-size:11px}.request-textarea{width:100%;min-height:120px;resize:vertical;margin:8px 0 12px}@media(max-width:600px){.form-tiles{grid-template-columns:1fr}}
 .preference-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding:13px 0;font-size:13px}.preference-row:first-of-type{margin-top:12px}.preference-row input{width:18px;height:18px;accent-color:var(--coral);cursor:pointer}
 .role-select{max-width:130px;flex:0 0 130px;padding:8px}
+.catalog-row{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--line);padding:13px 0}.catalog-row b,.catalog-row small{display:block}.admin-catalog{margin-top:20px}
 
