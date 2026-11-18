@@ -6,7 +6,7 @@ function load(path, overrides) {
 }
 (async () => {
   const calls = []; let allowed = false;
-  const mocks = { '@/lib/auth': { getCurrentUser: async () => ({ name: 'Real User', initials: 'RU', accessRole: 'member' }) }, '@/lib/db': { ensureDatabase: async () => true, sql: async (strings, ...values) => {
+  const mocks = { '@/lib/workflow-assignment': {resolveTaskWorkflow:async()=>null}, '@/lib/auth': { getCurrentUser: async () => ({ name: 'Real User', initials: 'RU', accessRole: 'member' }) }, '@/lib/db': { ensureDatabase: async () => true, sql: async (strings, ...values) => {
     const query = strings.join('?'); calls.push({ query, values });
     if (query.startsWith('SELECT id FROM tasks')) return allowed ? [{ id: 7 }] : [];
     if (query.startsWith('UPDATE tasks')) return [{ id: 7, completed: false, status: 'To do' }];
@@ -46,4 +46,3 @@ function load(path, overrides) {
   assert.ok(personalQuery.values.includes(false), 'Personal query must enforce owner filter');
   console.log('PASS: signed-in check-ins, invalid mood rejection, task access denial, reopening tasks, personal queue owner filter');
 })().catch(error => { console.error(error); process.exitCode = 1; });
-

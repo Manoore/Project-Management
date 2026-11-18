@@ -10,7 +10,7 @@ function load(path, overrides) {
 }
 (async () => {
   let queries = 0;
-  const db = load('lib/db.ts', { './demo-admin': load('lib/demo-admin.ts', {}), '@neondatabase/serverless': { neon: () => async () => { queries++; return [{ version: 'ready' }]; } } });
+  const db = load('lib/db.ts', { './delivery-schema': {ensureDeliverySchema:async()=>{}}, './demo-admin': load('lib/demo-admin.ts', {}), '@neondatabase/serverless': { neon: () => async () => { queries++; return [{ version: 'ready' }]; } } });
   await Promise.all([db.ensureDatabase(), db.ensureDatabase(), db.ensureDatabase()]);
   assert.equal(queries, 1, 'Concurrent requests should share one initialization');
   await db.ensureDatabase(); assert.equal(queries, 1, 'Warm requests should not rerun migrations');
@@ -30,4 +30,3 @@ function load(path, overrides) {
   assert.ok(mutation.values.includes('Project Creator'), 'Creator must retain project access when assigning another owner');
   console.log('PASS: initialization cache, concurrent initialization, permission denial, blank-name validation, atomic creation and creator membership');
 })().catch(error => { console.error(error); process.exitCode = 1; });
-

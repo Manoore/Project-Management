@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   const existing = await sql!`SELECT id FROM projects WHERE LOWER(name) = LOWER(${body.name}) AND archived = FALSE LIMIT 1`;
   if (existing[0]) return NextResponse.json({ error: "A project with this name already exists" }, { status: 409 });
   const owner = body.owner || currentUser.name;
-  const rows = await sql!`WITH created AS (INSERT INTO projects (name, owner, team, product, description, status) VALUES (${body.name}, ${owner}, ${body.team || currentUser.team}, ${body.product || "General"}, ${body.description ?? null}, 'On track') RETURNING id, name, progress, status, owner, team, product, description), membership AS (INSERT INTO project_members (project_name, employee_name, role) SELECT name, owner, 'Owner' FROM created UNION SELECT name, ${currentUser.name}, 'Contributor' FROM created ON CONFLICT (project_name, employee_name) DO NOTHING), notification AS (INSERT INTO notifications (employee_name, type, message) SELECT owner, 'project_assigned', 'You were assigned as owner of ' || name FROM created), activity AS (INSERT INTO activity_events (employee_name, event_type, message) SELECT ${currentUser.name}, 'project_created', 'Created project ' || name FROM created) SELECT * FROM created`;
+  const rows = await sql!`WITH created AS (INSERT INTO projects (name, owner, team, product, description, status) VALUES (${body.name}, ${owner}, ${body.team || currentUser.team}, ${body.product || "General"}, ${body.description ?? null}, 'On track') RETURNING id, name, progress, status, owner, team, product, description), workflow AS (INSERT INTO project_workflow_states(project_id,name,category,position,is_default) SELECT id,d.name,d.name,d.position,TRUE FROM created CROSS JOIN (VALUES ('To do',0),('In progress',1),('Review',2),('Done',3)) d(name,position)), membership AS (INSERT INTO project_members (project_name, employee_name, role) SELECT name, owner, 'Owner' FROM created UNION SELECT name, ${currentUser.name}, 'Contributor' FROM created ON CONFLICT (project_name, employee_name) DO NOTHING), notification AS (INSERT INTO notifications (employee_name, type, message) SELECT owner, 'project_assigned', 'You were assigned as owner of ' || name FROM created), activity AS (INSERT INTO activity_events (employee_name, event_type, message) SELECT ${currentUser.name}, 'project_created', 'Created project ' || name FROM created) SELECT * FROM created`;
   return NextResponse.json(rows[0], { status: 201 });
 }
 
@@ -49,5 +49,4 @@ export async function DELETE(request: Request) {
   if (rows[0]) await sql!`INSERT INTO activity_events (employee_name, event_type, message) VALUES ('Maya', 'project_archived', ${`Archived project ${rows[0].name}`})`;
   return NextResponse.json({ ok: Boolean(rows[0]), project: rows[0] ?? null }, { status: rows[0] ? 200 : 404 });
 }
-
 

@@ -1,7 +1,9 @@
-export type WorkItem = { id: number; title: string; projectName: string; projectId?: number | null; owner: string; priority: string; status: string; dueDate: string | null; completed: boolean; canEdit?: boolean; description?: string; labels?: string[]; cycleId?: number | null };
+export type WorkItem = { id: number; title: string; projectName: string; projectId?: number | null; workflowStateId?: number | null; moduleId?: number | null; owner: string; priority: string; status: string; dueDate: string | null; completed: boolean; canEdit?: boolean; description?: string; labels?: string[]; cycleId?: number | null };
 export const taskStatuses = ['To do', 'In progress', 'Review', 'Done'];
 export const taskPriorities = ['Low', 'Normal', 'High', 'Urgent'];
 export function validateTaskInput(body: Record<string, unknown>) {
+  if ('moduleId' in body && body.moduleId !== null && (typeof body.moduleId !== 'number' || !Number.isInteger(body.moduleId) || body.moduleId < 1 || body.moduleId > 2147483647)) return 'Choose a valid module';
+  if ('workflowStateId' in body && body.workflowStateId !== null && (typeof body.workflowStateId !== 'number' || !Number.isInteger(body.workflowStateId) || body.workflowStateId < 1 || body.workflowStateId > 2147483647)) return 'Choose a valid workflow stage';
   if ('owner' in body && (typeof body.owner !== 'string' || !body.owner.trim() || body.owner.trim().length > 200)) return 'Choose a valid assignee';
   if ('description' in body && (typeof body.description !== 'string' || body.description.length > 10000)) return 'Use a description up to 10,000 characters';
   if ('labels' in body && (!Array.isArray(body.labels) || body.labels.length > 10 || body.labels.some(label => typeof label !== 'string' || !label.trim() || label.trim().length > 30))) return 'Use up to 10 labels of 1–30 characters each';

@@ -1,3 +1,4 @@
+import { ensureDeliverySchema } from './delivery-schema';
 import { neon } from "@neondatabase/serverless";
 import { DEMO_ADMIN_EMAIL, DEMO_ADMIN_NAME, DEMO_ADMIN_HASH } from "./demo-admin";
 
@@ -15,7 +16,7 @@ async function initializeDatabase() {
   // Warm instances reuse the promise. Cold instances check one version row instead
   // of running all schema statements and seed queries on every API request.
   try {
-    const ready = await sql`SELECT version FROM peopleflow_schema WHERE version = '2026-11-planning-v1'`;
+    const ready = await sql`SELECT version FROM peopleflow_schema WHERE version = '2026-11-delivery-v4'`;
     if (ready.length) return true;
   } catch (error) {
     if ((error as { code?: string }).code !== '42P01') throw error;
@@ -128,7 +129,8 @@ async function initializeDatabase() {
     // Do not replace an existing account, promote another user, or reset a password.
     await sql`WITH first_run AS (INSERT INTO demo_seed_versions (version) VALUES ('demo-admin-v1') ON CONFLICT DO NOTHING RETURNING version), employee AS (INSERT INTO employees (name, initials, email, role, team, access_role) SELECT ${DEMO_ADMIN_NAME}, 'DA', ${DEMO_ADMIN_EMAIL}, 'Demo administrator', 'Product', 'admin' WHERE EXISTS (SELECT 1 FROM first_run) AND NOT EXISTS (SELECT 1 FROM password_accounts WHERE email = ${DEMO_ADMIN_EMAIL}) AND NOT EXISTS (SELECT 1 FROM employees WHERE name = ${DEMO_ADMIN_NAME}) ON CONFLICT DO NOTHING RETURNING name) INSERT INTO password_accounts (email, employee_name, password_hash) SELECT ${DEMO_ADMIN_EMAIL}, name, ${DEMO_ADMIN_HASH} FROM employee ON CONFLICT DO NOTHING`;
   }
-  await sql`INSERT INTO peopleflow_schema (version) VALUES ('2026-11-planning-v1') ON CONFLICT DO NOTHING`;
+  await ensureDeliverySchema(sql);
+  await sql`INSERT INTO peopleflow_schema (version) VALUES ('2026-11-delivery-v4') ON CONFLICT DO NOTHING`;
   return true;
 }
 

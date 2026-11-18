@@ -1,7 +1,7 @@
 const ts = require('typescript'), fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict');
 const output = {};
 const constants = { taskStatuses: ['To do', 'In progress', 'Review', 'Done'], taskPriorities: ['Low', 'Normal', 'High', 'Urgent'] };
-const mocks = { '@/lib/work-items': constants, './task-dialog': {}, './cycle-panel': {}, './project-workspace.module.css': {} };
+const mocks = { './project-tools':{}, './bulk-work-controls':{}, './delivery-tools.module.css':{}, '@/lib/work-items': constants, './task-dialog': {}, './cycle-panel': {}, './project-workspace.module.css': {} };
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('app/project-workspace.tsx', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2020 } }).outputText, { exports: output, require: id => mocks[id] ?? require(id) });
 const { filterProjectWork, normalizeProjectView } = output;
 const defaults = normalizeProjectView(null);

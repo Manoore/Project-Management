@@ -26,7 +26,7 @@ function load(path, overrides = {}) { const exports = {}; vm.runInNewContext(ts.
     const promise = Promise.resolve(result); promise.query = query; return promise;
   };
   sql.transaction = async (queries, options) => { transactions.push({ queries: queries.map(q => q.query), options }); return Promise.all(queries); };
-  const mocks = {
+  const mocks = { '@/lib/workflow-assignment': {resolveTaskWorkflow:async()=>null},
     '@/lib/auth': { getCurrentUser: async () => ({ name: 'Signed In', team: 'Engineering', accessRole: role }), canManageProjects: u => ['manager', 'admin'].includes(u.accessRole) },
     '@/lib/db': { ensureDatabase: async () => true, sql }, '@/lib/work-items': work,
     '@/lib/task-access': { canAccessTask: async () => true }, '@/lib/project-access': { getVisibleProject: async () => visible ? { id: 3, name: 'Project', owner: 'Signed In' } : null },

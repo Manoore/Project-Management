@@ -13,7 +13,7 @@ function load(path, overrides = {}) {
   assert.equal(await policy.canAccessTask({ name: 'User', accessRole: 'viewer' }, 10, true), false);
   assert.equal(await policy.canAccessTask({ name: 'User', accessRole: 'member' }, NaN), false);
   assert.equal(calls.length, 0, 'Invalid or viewer writes must not query task data');
-  const mocks = { '@/lib/auth': { getCurrentUser: async () => ({ name: 'Signed In User', accessRole: role }) }, '@/lib/db': db, '@/lib/task-access': { canAccessTask: async () => allowed }, '@/lib/work-items': input };
+  const mocks = { '@/lib/workflow-assignment': {resolveTaskWorkflow:async()=>null}, '@/lib/auth': { getCurrentUser: async () => ({ name: 'Signed In User', accessRole: role }) }, '@/lib/db': db, '@/lib/task-access': { canAccessTask: async () => allowed }, '@/lib/work-items': input };
   const request = body => new Request('https://example.com/api/tasks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const tasks = load('app/api/tasks/route.ts', mocks);
   assert.equal((await tasks.PATCH(request({ id: 10, dueDate: 'wrong' }))).status, 400);
@@ -29,4 +29,3 @@ function load(path, overrides = {}) {
   assert.equal(calls.length, 0, 'Inaccessible task comments must never be inserted');
   console.log('PASS: task field validation, viewer policy, invalid IDs, due-date clearing, task title edits, comment authorship and access checks');
 })().catch(e => { console.error(e); process.exitCode = 1; });
-
