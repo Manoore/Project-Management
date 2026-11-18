@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { ensureDatabase, sql } from "@/lib/db";
+import { microsoftConfig } from '@/lib/microsoft-config';
 export async function GET(request: NextRequest) {
   const failed = () => { const r = NextResponse.redirect(new URL("/signin?error=authentication", request.url)); r.cookies.set("peopleflow_oauth", "", { maxAge: 0, path: "/api/auth/microsoft" }); return r; };
   try {
     const context = JSON.parse(request.cookies.get("peopleflow_oauth")?.value ?? "{}");
     const code = request.nextUrl.searchParams.get("code"), state = request.nextUrl.searchParams.get("state");
-    const tenant = process.env.MICROSOFT_TENANT_ID;
-    if (!code || !state || state !== context.state || !context.verifier || !tenant || ["common", "organizations", "consumers"].includes(tenant)) return failed();
+    const config=microsoftConfig(request.url),tenant=config.tenantId;
+    if (!config.configured || !code || !state || state !== context.state || !context.verifier) return failed();
     const tokenResponse = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/token`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "authorization_code", client_id: process.env.MICROSOFT_CLIENT_ID ?? "", client_secret: process.env.MICROSOFT_CLIENT_SECRET ?? "", code, code_verifier: context.verifier, redirect_uri: process.env.MICROSOFT_REDIRECT_URI || new URL("/api/auth/microsoft/callback", request.url).href }), cache: "no-store" });
     if (!tokenResponse.ok) return failed();
     const token = await tokenResponse.json();
@@ -31,4 +32,3 @@ export async function GET(request: NextRequest) {
     return response;
   } catch { return failed(); }
 }
-

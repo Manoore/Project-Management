@@ -10,7 +10,7 @@ function load(path, overrides) {
 }
 (async () => {
   let queries = 0;
-  const db = load('lib/db.ts', { './delivery-schema': {ensureDeliverySchema:async()=>{}}, './demo-admin': load('lib/demo-admin.ts', {}), '@neondatabase/serverless': { neon: () => async () => { queries++; return [{ version: 'ready' }]; } } });
+  const db = load('lib/db.ts', { './jobs-schema': {ensureJobsSchema:async()=>{}}, './delivery-schema': {ensureDeliverySchema:async()=>{}}, './demo-admin': load('lib/demo-admin.ts', {}), '@neondatabase/serverless': { neon: () => async () => { queries++; return [{ version: 'ready' }]; } } });
   await Promise.all([db.ensureDatabase(), db.ensureDatabase(), db.ensureDatabase()]);
   assert.equal(queries, 1, 'Concurrent requests should share one initialization');
   await db.ensureDatabase(); assert.equal(queries, 1, 'Warm requests should not rerun migrations');

@@ -1,0 +1,31 @@
+const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
+function load(file,mocks={},env={},globals={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports,Request,URL,URLSearchParams,Buffer,console,process:{env},require:id=>mocks[id]??require(id),...globals});return exports;}
+const work=load('lib/work-items.ts'),inputs=load('lib/operations-input.ts',{'./work-items':work});
+const valid={title:'Weekly review',description:'Review risks',owner:'Member',priority:'High',labels:[],moduleId:null,cadence:'weekly',everyN:1,startDate:'2027-01-01',endDate:null,enabled:true};
+assert.equal(inputs.validateRecurrence(valid),null);
+for(const b of [{...valid,cadence:'hourly'},{...valid,everyN:0},{...valid,cadence:'monthly',everyN:13},{...valid,enabled:'yes'},{...valid,startDate:'2027-02-30'},{...valid,moduleId:'3'},{...valid,labels:['']},{...valid,endDate:'2026-12-31'}])assert.ok(inputs.validateRecurrence(b));
+assert.equal(inputs.validatePreferences({inApp:false,timeZone:'Asia/Calcutta',quietHours:{enabled:true,start:'22:00',end:'08:00'}}),null);
+for(const b of [{inApp:'false'},{timeZone:'Not/AZone'},{quietHours:{enabled:true,start:'25:00',end:'08:00'}},{quietHours:{enabled:true,start:'08:00',end:'08:00'}},{quietHours:[]},{owner:'Other'}])assert.ok(inputs.validatePreferences(b));
+const secret='integration-secret-not-for-production-0123456789',cron=load('lib/cron-auth.ts',{}, {CRON_SECRET:secret});
+assert.equal(cron.validCronRequest(new Request('https://test.local/api/jobs/daily')),false);
+assert.equal(cron.validCronRequest(new Request('https://test.local/api/jobs/daily',{headers:{authorization:'Bearer wrong'}})),false);
+assert.equal(cron.validCronRequest(new Request('https://test.local/api/jobs/daily',{headers:{authorization:'Bearer '+secret}})),true);
+assert.equal(load('lib/cron-auth.ts').cronConfigured(),false);
+const fakeEnv={MICROSOFT_CLIENT_ID:'11111111-1111-1111-1111-111111111111',MICROSOFT_CLIENT_SECRET:'test-only-secret',MICROSOFT_TENANT_ID:'22222222-2222-2222-2222-222222222222',MICROSOFT_REDIRECT_URI:'https://test.local/api/auth/microsoft/callback'};
+const config=load('lib/microsoft-config.ts',{},fakeEnv).microsoftConfig;
+assert.equal(config('https://test.local/api/auth/providers').configured,true);
+assert.equal(config('https://another.local/api/auth/providers').configured,false);
+assert.equal(load('lib/microsoft-config.ts',{}, {...fakeEnv,MICROSOFT_TENANT_ID:'common'}).microsoftConfig('https://test.local').configured,false);
+assert.equal(load('lib/microsoft-config.ts',{}, {...fakeEnv,MICROSOFT_REDIRECT_URI:'https://test.local/api/auth/microsoft/callback?returnTo=evil'}).microsoftConfig('https://test.local').configured,false);
+(async()=>{
+ const signin=load('app/api/auth/microsoft/route.ts',{'@/lib/microsoft-config':{microsoftConfig:config}},fakeEnv);
+ const response=await signin.GET(new Request('https://test.local/api/auth/microsoft'));
+ const redirect=new URL(response.headers.get('location'));assert.equal(redirect.hostname,'login.microsoftonline.com');assert.equal(redirect.searchParams.get('code_challenge_method'),'S256');assert.equal(redirect.searchParams.get('state').length,64);assert.ok(response.headers.get('set-cookie').includes('HttpOnly'));
+ let fetchCount=0;
+ const callback=load('app/api/auth/microsoft/callback/route.ts',{'@/lib/microsoft-config':{microsoftConfig:config},'@/lib/db':{ensureDatabase:async()=>true,sql:async strings=>strings.join('').startsWith('SELECT name')?[{name:'Existing SSO Member'}]:[]}},fakeEnv,{fetch:async()=>{fetchCount++;return {ok:true,json:async()=>fetchCount===1?{access_token:'fake-access-token'}:{sub:'provider-subject',name:'SSO Member'}};}});
+ const rejected=await callback.GET({url:'https://test.local/api/auth/microsoft/callback?code=x&state=bad',nextUrl:new URL('https://test.local/api/auth/microsoft/callback?code=x&state=bad'),cookies:{get:()=>({value:JSON.stringify({state:'correct',verifier:'fake-verifier'})})}});
+ assert.ok(rejected.headers.get('location').includes('error=authentication'));assert.equal(fetchCount,0);
+ const accepted=await callback.GET({url:'https://test.local/api/auth/microsoft/callback?code=x&state=correct',nextUrl:new URL('https://test.local/api/auth/microsoft/callback?code=x&state=correct'),cookies:{get:()=>({value:JSON.stringify({state:'correct',verifier:'fake-verifier'})})}});
+ assert.equal(fetchCount,2);assert.equal(new URL(accepted.headers.get('location')).pathname,'/workspace');assert.ok(accepted.headers.get('set-cookie').includes('peopleflow_session='));
+ console.log('PASS: recurrence and preference validation, secret-protected cron, Microsoft configuration/redirect checks, PKCE/state handling and mocked callback/session creation');
+})().catch(e=>{console.error(e);process.exitCode=1;});

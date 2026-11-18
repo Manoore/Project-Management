@@ -18,6 +18,8 @@ Password accounts use salted scrypt hashes and database-backed sessions. Owners 
 
 See [the project delivery guide](docs/delivery-guide.md) for bulk actions, configurable workflows, modules, versioned documents, project analytics, and keyboard shortcuts.
 
+See [backend operations](docs/backend-operations.md) for assignment notifications, quiet hours, recurring schedules, reminder jobs, CRON_SECRET setup, and Microsoft provider readiness.
+
 Schema initialization is versioned in lib/db.ts. Delivery migrations use an advisory lock and transaction. PostgreSQL normalizes workflow categories and completion flags so older task controls remain compatible.
 
 ## Verification

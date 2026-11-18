@@ -7,5 +7,4 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/signin", request.url));
   }
 }
-export const config = { matcher: ["/workspace/:path*", "/api/((?!auth/).*)"] };
-
+export const config = { matcher: ["/workspace/:path*", "/api/((?!auth/|jobs/daily$).*)"] };
